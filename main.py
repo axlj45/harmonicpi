@@ -2,6 +2,7 @@ import numpy as np
 from data_service import get_ticker_df
 from pattern_analysis import find_extrema
 from pattern_analysis import is_gartley
+from pattern_analysis import apply_technical_analysis
 from notification_service import send_notification
 from plotter_service import get_plot
 from blob_service import upload_chart
@@ -33,6 +34,8 @@ def identify_patterns(lvl, fuzz_factor, order):
     floor = level[2]
 
     df = get_ticker_df(interval, yf_interval, floor)
+    
+    df = apply_technical_analysis(df)
 
     for ticker in df.index.get_level_values(1).unique():
         data = df.xs(ticker, level=1).drop_duplicates().tail(65)

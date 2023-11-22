@@ -12,7 +12,11 @@ def get_plot(
     ticker,
 ):
     plt.figure(figsize=(10, 6))
-    plt.plot(data.index, data["adj close"], label="Adj Close")
+    plt.plot(data.index, data["adj close"], label="Adj Close", color="gray")
+    stacked_emas = [8, 21, 34, 55, 89]
+    for i in range(len(stacked_emas)):
+        length = stacked_emas[i]
+        plt.plot(data.index, data[f"EMA{length}"], label=f"EMA/{length}")
 
     # Plot highs in green and lows in red
     plt.scatter(

@@ -1,5 +1,7 @@
 from scipy.signal import argrelextrema
 import numpy as np
+import pandas_ta
+
 
 def find_extrema(data, order=7):
     adj_close = data["adj close"]
@@ -10,6 +12,25 @@ def find_extrema(data, order=7):
 
 def is_between(needle, haystack):
     return abs(needle) > haystack[0] and abs(needle) < haystack[1]
+
+
+def apply_technical_analysis(df):
+    df["macd"] = df.groupby(level=1, group_keys=False)["adj close"].apply(compute_macd)
+    df["rsi"] = df.groupby(level=1)["adj close"].transform(
+        lambda x: pandas_ta.rsi(close=x, length=20)
+    )
+    stacked_emas = [8, 21, 34, 55, 89]
+    for i in range(len(stacked_emas)):
+        length = stacked_emas[i]
+        df[f"EMA{length}"] = df.groupby(level=1)["adj close"].transform(
+            lambda x: pandas_ta.ema(close=x, length=length)
+        )
+    return df
+
+
+def compute_macd(close):
+    macd = pandas_ta.macd(close=close, length=20).iloc[:, 0]
+    return macd
 
 
 def is_gartley(zigzag, fuzz_factor):

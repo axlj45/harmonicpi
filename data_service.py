@@ -31,7 +31,7 @@ def cached_tickers(dt):
 
 def get_ticker_df(interval, yf_interval, floor, bars=65):
     minsPerDay = 8 * 60
-    totalMins = 65 * interval * 1.2
+    totalMins = max(bars, 100) * interval * 1.2
     totalDays = np.ceil(totalMins / minsPerDay)
     end_date = pd.Timestamp.now().ceil(floor)
 
