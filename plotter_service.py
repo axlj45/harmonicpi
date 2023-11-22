@@ -23,9 +23,9 @@ def get_plot(data, minima, maxima, last_five_extrema, pattern_name, sentiment, y
     plt.ylabel('Adjusted Close')
     plt.legend()
 
-    start = data.index[last_five_extrema[0]].strftime("%Y%d%m-%H%M%S")
-    end = data.index[last_five_extrema[-1]].strftime("%Y%d%m-%H%M%S")
-    
+    start = data.index[last_five_extrema[0]].strftime("%Y%m%d-%H%M%S")
+    end = data.index[last_five_extrema[-1]].strftime("%Y%m%d-%H%M%S")
+
     path = f"candidates/{ticker}_{pattern_name}_{sentiment}_{start}_{end}.png"
     print(path)
     plt.savefig(path, bbox_inches='tight')
