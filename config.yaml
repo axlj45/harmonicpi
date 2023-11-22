@@ -1,3 +1,4 @@
-blob_connection_string: ''
-blob_contsiner: ''
-google_chat_webhook: ''
+azure_blob_sas_key: ""
+az_blob_container: ""
+az_blob_sas_url: ""
+google_chat_webhook: ""
