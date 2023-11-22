@@ -22,14 +22,18 @@ def upload_file_to_blob(container_name, file_path, blob_name):
 
         # Upload the file
         with open(file_path, "rb") as data:
-            blob_client.upload_blob(data)
+            blob_client.upload_blob(data, overwrite=True)
 
-        print(f"File {file_path} uploaded to {container_name}/{blob_name}")
+        chart_url = blob_client.url.split("?")[0]
+        print(f"File {file_path} uploaded to {chart_url}")
+
+        return chart_url
 
     except Exception as e:
         print(e)
 
 
 def upload_chart(chart_path):
-    blob_name = os.path.basename(chart_path)
-    upload_file_to_blob(cfg["az_blob_container"], chart_path, blob_name)
+    blob_name = os.path.basename(chart_path).split("/")[-1]
+    chart_url = upload_file_to_blob(cfg["az_blob_container"], chart_path, blob_name)
+    return chart_url

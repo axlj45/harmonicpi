@@ -1,14 +1,10 @@
 import numpy as np
-
 from data_service import get_ticker_df
 from pattern_analysis import find_extrema
 from pattern_analysis import is_gartley
 from notification_service import send_notification
 from plotter_service import get_plot
-
-import warnings
-
-warnings.filterwarnings("ignore")
+from blob_service import upload_chart
 
 fuzz_factor = 7.0 / 100
 
@@ -75,11 +71,10 @@ def identify_patterns(lvl, fuzz_factor, order):
         sentiment = "Bullish" if bullish else "Bearish"
 
         if is_gartley(zigzag, fuzz_factor):
-            candidate = data.index[last_five_extrema[-1]]
-            print(candidate)
-            send_notification(ticker, sentiment, "Gartley", yf_interval,X,D)
-            # send_chat(f"{sentiment} Gartley identified on {ticker} {yf_interval} chart")
-            result = get_plot(
+            D_data = data.index[D]
+            X_data = data.index[X]
+            print(D_data, X_data)
+            plot_and_path = get_plot(
                 data,
                 minima,
                 maxima,
@@ -88,6 +83,11 @@ def identify_patterns(lvl, fuzz_factor, order):
                 sentiment,
                 yf_interval,
                 ticker,
+            )
+            chart_path = plot_and_path[1]
+            chart_url = upload_chart(chart_path)
+            send_notification(
+                ticker, sentiment, "Gartley", yf_interval, X_data, D_data, chart_url
             )
 
 

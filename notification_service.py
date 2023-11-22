@@ -3,25 +3,55 @@ from json import dumps
 from joblib import Memory
 from config import get_config
 
-cachedir = './yfinance_cache'  # Choose your cache directory
+cachedir = "./yfinance_cache"
 memory = Memory(cachedir, verbose=0)
 cfg = get_config()
 
+
 def send_chat(message):
     url = cfg["google_chat_webhook"]
-    app_message = {"text": message}
     message_headers = {"Content-Type": "application/json; charset=UTF-8"}
     http_obj = Http()
     response = http_obj.request(
         uri=url,
         method="POST",
         headers=message_headers,
-        body=dumps(app_message),
+        body=dumps(message),
     )
     return response
 
-@memory.cache    
-def send_notification(ticker, sentiment, pattern, interval, start, stop):
-    send_chat(f"{sentiment} Gartley identified on {ticker} {interval} chart. X: {start} D: {stop}")
-    
-    
+
+@memory.cache
+def send_notification(ticker, sentiment, pattern, interval, start, stop, chart_url):
+    try:
+        message = f"{sentiment} {pattern} identified for {ticker} on the {interval} chart. X: {start} D: {stop}"
+        send_chat(build_message(message, chart_url))
+    except Exception as e:
+        print(f"Failed to send google chat notification: {e}")
+
+
+def build_message(message, chart_url):
+    if chart_url is None:
+        return {"text": message}
+
+    message_with_chart = {
+        "cards": [
+            {
+                "sections": [
+                    {
+                        "widgets": [
+                            {"textParagraph": {"text": message}},
+                            {
+                                "image": {
+                                    "imageUrl": chart_url,
+                                    "onClick": {"openLink": {"url": chart_url}},
+                                }
+                            },
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+
+    return message_with_chart
