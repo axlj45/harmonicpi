@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 
 
 def get_plot(
@@ -58,3 +59,50 @@ def get_plot(
     plt.savefig(path, bbox_inches="tight")
 
     return [plt, path]
+
+
+def create_plotly(data, ticker, pattern_name, yf_interval):
+    hm = data[data["harmonic"] != 0]
+    hm_bull = hm[hm["harmonic"] == 1]
+    hm_bear = hm[hm["harmonic"] == -1]
+
+    fig = go.Figure(
+        data=[
+            go.Candlestick(
+                x=data.index,
+                open=data["open"],
+                high=data["high"],
+                low=data["low"],
+                close=data["adj close"],
+            )
+        ]
+    )
+
+    fig.add_scatter(
+        x=hm_bull.index,
+        y=hm_bull["low"] - (hm_bull["low"] * 0.0001),
+        mode="markers",
+        marker=dict(size=5, color="yellow"),
+        name="Bull Signal",
+    )
+
+    fig.add_scatter(
+        x=hm_bear.index,
+        y=hm_bear["high"] + (hm_bear["high"] * 0.0001),
+        mode="markers",
+        marker=dict(size=5, color="blue"),
+        name="Bear Signal",
+    )
+
+    fig.add_trace(go.Scatter(x=data.index, y=data["ema"], mode="lines", name="EMA"))
+
+    fig.update_layout(xaxis_rangeslider_visible=False)
+    sentiment = f"S{data.iloc[-2]['harmonic']}"
+    start = data["date"].min().strftime("%Y-%m-%d_%H%M%S")
+    end = data["date"].max().strftime("%Y-%m-%d_%H%M%S")
+    path = f"candidates/{ticker}_{pattern_name}_{sentiment}_{yf_interval}_{start}_{end}"
+
+    fig.write_html(f"{path}.html")
+    fig.write_image(f"{path}.png")
+
+    return (f"{path}.html", f"{path}.png")

@@ -25,7 +25,7 @@ def upload_file_to_blob(container_name, file_path, blob_name):
             blob_client.upload_blob(data, overwrite=True)
 
         chart_url = blob_client.url.split("?")[0]
-        print(f"File {file_path} uploaded to {chart_url}")
+        # print(f"File {file_path} uploaded to {chart_url}")
 
         return chart_url
 

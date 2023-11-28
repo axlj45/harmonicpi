@@ -22,16 +22,18 @@ def send_chat(message):
 
 
 @memory.cache
-def send_notification(ticker, sentiment, pattern, interval, start, stop, chart_url):
+def send_notification(
+    ticker, sentiment, pattern, interval, start, stop, chart_png_url, chart_url
+):
     try:
         message = f"{sentiment} {pattern} identified for {ticker} on the {interval} chart. X: {start} D: {stop}"
-        send_chat(build_message(message, chart_url))
+        send_chat(build_message(message, chart_png_url, chart_url))
     except Exception as e:
         print(f"Failed to send google chat notification: {e}")
 
 
-def build_message(message, chart_url):
-    if chart_url is None:
+def build_message(message, chart_png_url, chart_url):
+    if chart_png_url is None:
         return {"text": message}
 
     message_with_chart = {
@@ -43,7 +45,7 @@ def build_message(message, chart_url):
                             {"textParagraph": {"text": message}},
                             {
                                 "image": {
-                                    "imageUrl": chart_url,
+                                    "imageUrl": chart_png_url,
                                     "onClick": {"openLink": {"url": chart_url}},
                                 }
                             },
@@ -53,5 +55,5 @@ def build_message(message, chart_url):
             }
         ]
     }
-
+    
     return message_with_chart
