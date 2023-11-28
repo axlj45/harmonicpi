@@ -24,7 +24,7 @@ def cached_tickers(dt):
     nasdaq_symbols_list = QQQ["Ticker"].unique().tolist()
 
     symbols_list.extend(nasdaq_symbols_list)
-    symbols_list.extend(["QQQ", "SPY", "IAUM", "SLV", "PPLT"])
+    symbols_list.extend(["QQQ", "SPY", "IAUM", "SLV", "PPLT", "PYPL", "META"])
     symbols_list = list(set(symbols_list))
 
     return symbols_list

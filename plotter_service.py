@@ -61,10 +61,19 @@ def get_plot(
     return [plt, path]
 
 
-def create_plotly(data, ticker, pattern_name, yf_interval):
+def create_plotly(data, ticker, sentiment, pattern_name, yf_interval):
+    data = data.round(2)
     hm = data[data["harmonic"] != 0]
     hm_bull = hm[hm["harmonic"] == 1]
     hm_bear = hm[hm["harmonic"] == -1]
+
+    data["Formatted_Date"] = data["date"].dt.strftime("%Y-%m-%d %H:%M:%S")
+
+    hover_text = data.apply(
+        lambda row: f'Date: {row["Formatted_Date"]}<br>Open: {row["open"]}<br>High: {row["high"]}<br>'
+        f'Low: {row["low"]}<br>Close: {row["close"]}<br>Volume: {row["volume"]}',
+        axis=1,
+    )
 
     fig = go.Figure(
         data=[
@@ -74,6 +83,8 @@ def create_plotly(data, ticker, pattern_name, yf_interval):
                 high=data["high"],
                 low=data["low"],
                 close=data["adj close"],
+                text=hover_text,  # Set custom hover text
+                hoverinfo="text",
             )
         ]
     )
@@ -96,10 +107,14 @@ def create_plotly(data, ticker, pattern_name, yf_interval):
 
     fig.add_trace(go.Scatter(x=data.index, y=data["ema"], mode="lines", name="EMA"))
 
-    fig.update_layout(xaxis_rangeslider_visible=False)
-    sentiment = f"S{data.iloc[-2]['harmonic']}"
     start = data["date"].min().strftime("%Y-%m-%d_%H%M%S")
     end = data["date"].max().strftime("%Y-%m-%d_%H%M%S")
+
+    fig.update_layout(
+        xaxis_rangeslider_visible=False,
+        title=f"{ticker}: {sentiment} {pattern_name} on {yf_interval} ",
+    )
+
     path = f"candidates/{ticker}_{pattern_name}_{sentiment}_{yf_interval}_{start}_{end}"
 
     fig.write_html(f"{path}.html")

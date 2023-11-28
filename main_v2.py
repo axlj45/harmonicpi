@@ -55,8 +55,10 @@ def identify_patterns(lvl, fuzz_factor, order):
         if data.iloc[-2]["harmonic"] != 0:
             x = signal.iloc[-2][1].date
             d = signal.iloc[-2][5].date
-            sentiment = "BULLISH" if data.iloc[-2]["harmonic"] == 1 else "BEARISH"
-            chart_html, chart_png = create_plotly(data, ticker, "Gartley", yf_interval)
+            sentiment = "Bullish" if data.iloc[-2]["harmonic"] == 1 else "Bearish"
+            chart_html, chart_png = create_plotly(
+                data, ticker, sentiment, "Gartley", yf_interval
+            )
             chart_png_url = upload_chart(chart_png)
             chart_url = upload_chart(chart_html)
             send_notification(
