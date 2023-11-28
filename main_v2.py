@@ -33,7 +33,7 @@ def identify_patterns(lvl, fuzz_factor, order):
     yf_interval = level[1]
     floor = level[2]
 
-    df = get_ticker_df(interval, yf_interval, floor)
+    df = get_ticker_df(interval, yf_interval, floor, ["QQQ", "SPY"])
 
     for ticker in df.index.get_level_values(1).unique():
         data = df.xs(ticker, level=1).drop_duplicates()
@@ -55,7 +55,7 @@ def identify_patterns(lvl, fuzz_factor, order):
         if data.iloc[-2]["harmonic"] != 0:
             x = signal.iloc[-2][1].date
             d = signal.iloc[-2][5].date
-            sentiment = "BULLISH" if signal[0] == 1 else "BEARISH"
+            sentiment = "BULLISH" if data.iloc[-2]["harmonic"] == 1 else "BEARISH"
             chart_html, chart_png = create_plotly(data, ticker, "Gartley", yf_interval)
             chart_png_url = upload_chart(chart_png)
             chart_url = upload_chart(chart_html)

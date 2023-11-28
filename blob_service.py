@@ -1,4 +1,4 @@
-from azure.storage.blob import BlobServiceClient
+from azure.storage.blob import BlobServiceClient, ContentSettings
 from config import get_config
 import os
 
@@ -20,9 +20,16 @@ def upload_file_to_blob(container_name, file_path, blob_name):
             container=container_name, blob=blob_name
         )
 
+        content_settings = ContentSettings(content_type="image/png")
+
+        if blob_name[-4:] == "html":
+            content_settings = ContentSettings(content_type="text/html")
+
         # Upload the file
         with open(file_path, "rb") as data:
-            blob_client.upload_blob(data, overwrite=True)
+            blob_client.upload_blob(
+                data, content_settings=content_settings, overwrite=True
+            )
 
         chart_url = blob_client.url.split("?")[0]
         # print(f"File {file_path} uploaded to {chart_url}")
