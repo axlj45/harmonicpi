@@ -38,7 +38,7 @@ def identify_patterns(lvl, fuzz_factor, order):
         interval,
         yf_interval,
         floor,
-        ["QQQ", "SPY", "MSFT", "SLV", "NVDA", "NUGT", "VLTO"],
+        ["QQQ", "SPY", "MSFT", "SLV", "NVDA", "NUGT", "VLTO", "AMZN"],
     )
 
     for ticker in df.index.get_level_values(1).unique():
@@ -55,15 +55,17 @@ def identify_patterns(lvl, fuzz_factor, order):
         data = pd.concat([data, results_df], axis=1)
 
         avg_vol = data.loc[:, "volume"].mean()
-        if avg_vol < 50000:
+        if avg_vol < 100000:
             continue
 
         if data.iloc[-2]["harmonic"] != 0:
-            x = signal.iloc[-2][1].date
-            d = signal.iloc[-2][5].date
+            latestSignal = signal.iloc[-2]
+            x = latestSignal[1].date
+            d = latestSignal[5].date
+            xabcd = latestSignal[-5:]
             sentiment = "Bullish" if data.iloc[-2]["harmonic"] == 1 else "Bearish"
             chart_html, chart_png = create_plotly(
-                data, ticker, sentiment, "Gartley", yf_interval
+                data, ticker, sentiment, "Gartley", yf_interval, xabcd
             )
             chart_png_url = upload_chart(chart_png)
             chart_url = upload_chart(chart_html)

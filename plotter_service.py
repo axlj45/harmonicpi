@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
+import pandas as pd
 
 
 def get_plot(
@@ -61,7 +62,7 @@ def get_plot(
     return [plt, path]
 
 
-def create_plotly(data, ticker, sentiment, pattern_name, yf_interval):
+def create_plotly(data, ticker, sentiment, pattern_name, yf_interval, xabcd):
     chart_data = data.round(2)
     chart_data = chart_data.tail(100)
     hm = chart_data[chart_data["harmonic"] != 0]
@@ -105,8 +106,46 @@ def create_plotly(data, ticker, sentiment, pattern_name, yf_interval):
         marker=dict(size=5, color="blue"),
         name="Bear Signal",
     )
+    xabcd_df = pd.DataFrame(xabcd)
 
-    fig.add_trace(go.Scatter(x=chart_data.index, y=chart_data["ema"], mode="lines", name="EMA"))
+    abcd_bull = xabcd_df[xabcd_df["pivot"] == -1]
+    abcd_bear = xabcd_df[xabcd_df["pivot"] == 1]
+
+    for pt in abcd_bear["date"]:
+        chart_pt = chart_data[chart_data["date"] == pt]
+
+        fig.add_annotation(
+            x=chart_pt.index.item(),
+            y=chart_pt["high"].item()*1.002,
+            text="",
+            showarrow=True,
+            arrowhead=2,
+            arrowsize=1,
+            arrowwidth=3,
+            arrowcolor="red",
+            ax=0,
+            ay=-10,
+        )
+
+    for pt in abcd_bull["date"]:
+        chart_pt = chart_data[chart_data["date"] == pt]
+
+        fig.add_annotation(
+            x=chart_pt.index.item(),
+            y=chart_pt["low"].item()*.998,
+            text="",
+            showarrow=True,
+            arrowhead=2,
+            arrowsize=1,
+            arrowwidth=3,
+            arrowcolor="green",
+            ax=0,
+            ay=10,
+        )
+
+    fig.add_trace(
+        go.Scatter(x=chart_data.index, y=chart_data["ema"], mode="lines", name="EMA")
+    )
 
     start = data["date"].min().strftime("%Y-%m-%d_%H%M%S")
     end = data["date"].max().strftime("%Y-%m-%d_%H%M%S")
