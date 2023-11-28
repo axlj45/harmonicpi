@@ -33,7 +33,7 @@ def identify_patterns(lvl, fuzz_factor, order):
     yf_interval = level[1]
     floor = level[2]
 
-    df = get_ticker_df(interval, yf_interval, floor, ["AMZN", "SPY"])
+    df = get_ticker_df(interval, yf_interval, floor)
 
     for ticker in df.index.get_level_values(1).unique():
         data = df.xs(ticker, level=1).drop_duplicates()
