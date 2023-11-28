@@ -62,14 +62,15 @@ def get_plot(
 
 
 def create_plotly(data, ticker, sentiment, pattern_name, yf_interval):
-    data = data.round(2)
-    hm = data[data["harmonic"] != 0]
+    chart_data = data.round(2)
+    chart_data = chart_data.tail(100)
+    hm = chart_data[chart_data["harmonic"] != 0]
     hm_bull = hm[hm["harmonic"] == 1]
     hm_bear = hm[hm["harmonic"] == -1]
 
-    data["Formatted_Date"] = data["date"].dt.strftime("%Y-%m-%d %H:%M:%S")
+    chart_data["Formatted_Date"] = chart_data["date"].dt.strftime("%Y-%m-%d %H:%M:%S")
 
-    hover_text = data.apply(
+    hover_text = chart_data.apply(
         lambda row: f'Date: {row["Formatted_Date"]}<br>Open: {row["open"]}<br>High: {row["high"]}<br>'
         f'Low: {row["low"]}<br>Close: {row["close"]}<br>Volume: {row["volume"]}',
         axis=1,
@@ -78,11 +79,11 @@ def create_plotly(data, ticker, sentiment, pattern_name, yf_interval):
     fig = go.Figure(
         data=[
             go.Candlestick(
-                x=data.index,
-                open=data["open"],
-                high=data["high"],
-                low=data["low"],
-                close=data["adj close"],
+                x=chart_data.index,
+                open=chart_data["open"],
+                high=chart_data["high"],
+                low=chart_data["low"],
+                close=chart_data["adj close"],
                 text=hover_text,  # Set custom hover text
                 hoverinfo="text",
             )
@@ -105,7 +106,7 @@ def create_plotly(data, ticker, sentiment, pattern_name, yf_interval):
         name="Bear Signal",
     )
 
-    fig.add_trace(go.Scatter(x=data.index, y=data["ema"], mode="lines", name="EMA"))
+    fig.add_trace(go.Scatter(x=chart_data.index, y=chart_data["ema"], mode="lines", name="EMA"))
 
     start = data["date"].min().strftime("%Y-%m-%d_%H%M%S")
     end = data["date"].max().strftime("%Y-%m-%d_%H%M%S")

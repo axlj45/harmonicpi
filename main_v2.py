@@ -6,6 +6,7 @@ from plotter_service import create_plotly
 from blob_service import upload_chart
 import pandas_ta
 import pandas as pd
+import pathlib
 
 fuzz_factor = 7.0 / 100
 
@@ -33,7 +34,12 @@ def identify_patterns(lvl, fuzz_factor, order):
     yf_interval = level[1]
     floor = level[2]
 
-    df = get_ticker_df(interval, yf_interval, floor, ["QQQ", "SPY"])
+    df = get_ticker_df(
+        interval,
+        yf_interval,
+        floor,
+        ["QQQ", "SPY", "MSFT", "SLV", "NVDA", "NUGT", "VLTO"],
+    )
 
     for ticker in df.index.get_level_values(1).unique():
         data = df.xs(ticker, level=1).drop_duplicates()
@@ -71,6 +77,8 @@ def identify_patterns(lvl, fuzz_factor, order):
                 chart_png_url,
                 chart_url,
             )
+            pathlib.Path.unlink(chart_html)
+            pathlib.Path.unlink(chart_png)
 
 
 # def signal(sentiment, signalType, signalSubType, metadata):
