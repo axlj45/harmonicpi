@@ -85,10 +85,17 @@ def create_plotly(data, ticker, sentiment, pattern_name, yf_interval, xabcd):
                 high=chart_data["high"],
                 low=chart_data["low"],
                 close=chart_data["adj close"],
-                text=hover_text,  # Set custom hover text
+                text=hover_text,
                 hoverinfo="text",
+                name=f"{yf_interval} candle",
             )
         ]
+    )
+
+    fig.add_trace(
+        go.Scatter(
+            x=chart_data.index, y=chart_data["ema"], mode="lines", name="8 bar EMA"
+        )
     )
 
     fig.add_scatter(
@@ -114,14 +121,18 @@ def create_plotly(data, ticker, sentiment, pattern_name, yf_interval, xabcd):
     for pt in abcd_bear["date"]:
         chart_pt = chart_data[chart_data["date"] == pt]
 
+        arrow_pos = (
+            chart_pt["high"].item()
+            + (chart_pt["high"].item() - chart_pt["low"].item()) * 0.1
+        )
         fig.add_annotation(
             x=chart_pt.index.item(),
-            y=chart_pt["high"].item()*1.002,
+            y=arrow_pos,
             text="",
             showarrow=True,
             arrowhead=2,
             arrowsize=1,
-            arrowwidth=3,
+            arrowwidth=2,
             arrowcolor="red",
             ax=0,
             ay=-10,
@@ -130,22 +141,22 @@ def create_plotly(data, ticker, sentiment, pattern_name, yf_interval, xabcd):
     for pt in abcd_bull["date"]:
         chart_pt = chart_data[chart_data["date"] == pt]
 
+        arrow_pos = (
+            chart_pt["low"].item()
+            - (chart_pt["high"].item() - chart_pt["low"].item()) * 0.1
+        )
         fig.add_annotation(
             x=chart_pt.index.item(),
-            y=chart_pt["low"].item()*.998,
+            y=arrow_pos,
             text="",
             showarrow=True,
             arrowhead=2,
             arrowsize=1,
-            arrowwidth=3,
+            arrowwidth=2,
             arrowcolor="green",
             ax=0,
             ay=10,
         )
-
-    fig.add_trace(
-        go.Scatter(x=chart_data.index, y=chart_data["ema"], mode="lines", name="EMA")
-    )
 
     start = data["date"].min().strftime("%Y-%m-%d_%H%M%S")
     end = data["date"].max().strftime("%Y-%m-%d_%H%M%S")
