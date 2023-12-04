@@ -185,6 +185,7 @@ def detect_structure(data, candle, backcandles, harmonic_fn, fuzz_factor=5, wind
     # current_candle_dist = current_candle.name - D.name
     # print(len(localdf), current_candle.name, D, current_candle_dist, D['date'], current_candle['date'], pfn1, pfn2)
     if pfn1 > 2:
+        print (f"Stale signal more than 2 bars away: {pfn1}.  ")
         return no_result
 
     hm_sentiment = last_five_extrema["pivot"].sum() * -1
