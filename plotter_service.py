@@ -14,7 +14,7 @@ def get_plot(
     ticker,
 ):
     plt.figure(figsize=(10, 6))
-    plt.plot(data.index, data["adj close"], label="Adj Close", color="gray")
+    plt.plot(data.index, data["close"], label="Close", color="gray")
     stacked_emas = [8, 21, 34, 55, 89]
     for i in range(len(stacked_emas)):
         length = stacked_emas[i]
@@ -23,13 +23,13 @@ def get_plot(
     # Plot highs in green and lows in red
     plt.scatter(
         data.iloc[maxima].index,
-        data.iloc[maxima]["adj close"],
+        data.iloc[maxima]["close"],
         color="green",
         label="Highs",
     )
     plt.scatter(
         data.iloc[minima].index,
-        data.iloc[minima]["adj close"],
+        data.iloc[minima]["close"],
         color="red",
         label="Lows",
     )
@@ -38,18 +38,18 @@ def get_plot(
     for i in range(len(last_five_extrema) - 1):
         xy1 = [
             data.index[last_five_extrema[i]],
-            data["adj close"][last_five_extrema[i]],
+            data["close"][last_five_extrema[i]],
         ]
         xy2 = [
             data.index[last_five_extrema[i + 1]],
-            data["adj close"][last_five_extrema[i + 1]],
+            data["close"][last_five_extrema[i + 1]],
         ]
 
         plt.plot([xy1[0], xy2[0]], [xy1[1], xy2[1]], color="black", linestyle="--")
 
     plt.title(f"{sentiment} {pattern_name} for {yf_interval} {ticker}")
     plt.xlabel("Date")
-    plt.ylabel("Adjusted Close")
+    plt.ylabel("Close")
     plt.legend()
 
     start = data.index[last_five_extrema[0]].strftime("%Y%m%d-%H%M%S")
@@ -62,7 +62,7 @@ def get_plot(
     return [plt, path]
 
 
-def create_plotly(data, ticker, sentiment, pattern_name, yf_interval, xabcd):
+def create_plotly(data, ticker, sentiment, pattern_name, yf_interval, xabcd, result):
     chart_data = data.round(2)
     chart_data = chart_data.tail(100)
     hm = chart_data[chart_data["harmonic"] != 0]
@@ -84,7 +84,7 @@ def create_plotly(data, ticker, sentiment, pattern_name, yf_interval, xabcd):
                 open=chart_data["open"],
                 high=chart_data["high"],
                 low=chart_data["low"],
-                close=chart_data["adj close"],
+                close=chart_data["close"],
                 text=hover_text,
                 hoverinfo="text",
                 name=f"{yf_interval} candle",
@@ -158,13 +158,39 @@ def create_plotly(data, ticker, sentiment, pattern_name, yf_interval, xabcd):
             ay=10,
         )
 
-    start = data["date"].min().strftime("%Y-%m-%d_%H%M%S")
-    end = data["date"].max().strftime("%Y-%m-%d_%H%M%S")
+        fig.add_shape(
+            type="rect",
+            x0=chart_data.index[-1] - 5,
+            y0=chart_data["close"].iloc[-1],
+            x1=chart_data.index[-1] + 5,
+            y1=result[3],
+            line=dict(
+                color="DarkGreen",
+            ),
+            fillcolor="ForestGreen",
+            opacity=0.3,
+        )
+        
+        fig.add_shape(
+            type="rect",
+            x0=chart_data.index[-1] - 5,
+            y0=chart_data["close"].iloc[-1],
+            x1=chart_data.index[-1] + 5,
+            y1=result[2],
+            line=dict(
+                color="Salmon",
+            ),
+            fillcolor="LightCoral",
+            opacity=0.3,
+        )
 
     fig.update_layout(
         xaxis_rangeslider_visible=False,
         title=f"{ticker}: {sentiment} {pattern_name} on {yf_interval} ",
     )
+
+    start = data["date"].min().strftime("%Y-%m-%d_%H%M%S")
+    end = data["date"].max().strftime("%Y-%m-%d_%H%M%S")
 
     path = f"candidates/{ticker}_{pattern_name}_{sentiment}_{yf_interval}_{start}_{end}"
 

@@ -30,14 +30,16 @@ def cached_tickers(dt):
     return symbols_list
 
 
-def get_ticker_df(interval, yf_interval, floor, tickers=None, bars=65):
-    minsPerDay = 8 * 60
+def get_ticker_df(interval, yf_interval, tickers=None, bars=65, end_date=None):
+    minsPerDay = (8 * 60) - 30
     totalMins = max(bars, 300) * interval * 1.2
     totalDays = np.ceil(totalMins / minsPerDay)
-    end_date = pd.Timestamp.now().ceil(floor)
+    
+    if end_date is None:
+        end_date = pd.Timestamp.now().ceil(yf_interval.replace("m","T"))
 
     start_date = pd.to_datetime(end_date) - pd.DateOffset(totalDays)
-    today = start_date.strftime("%Y-%d-%m")
+    today = start_date.strftime("%Y-%m-%d")
 
     if tickers is None:
         tickers = cached_tickers(today)
@@ -50,6 +52,6 @@ def get_ticker_df(interval, yf_interval, floor, tickers=None, bars=65):
 
     df.columns = df.columns.str.lower()
 
-    print([interval, yf_interval, floor])
+    print([interval, yf_interval])
 
     return df
