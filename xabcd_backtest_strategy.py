@@ -1,10 +1,10 @@
 from backtesting import Strategy
-
+import math
 
 class XABCD(Strategy):
     TPSLRatio = 2
     sl_pct = 0.025
-    tx_size = 0.99
+    tx_size = 0.5
 
     def sig1(self):
         return self.data.harmonic[-2]
@@ -40,14 +40,18 @@ class XABCD(Strategy):
             sl1 = self.data.Close[-1] - self.data.Close[-1] * self.sl_pct
             tp1 = d["close"] + tppc
             if tp1 > sl1 and tp1 > self.data.Close[-1] and sl1 < self.data.Close[-1]:
+                full_size = self.equity/self.data.Close[0]
+                half_size = math.floor(full_size/2)
                 self.buy(sl=sl1, tp=tp1, size=self.tx_size)
                 self.buy(sl=sl1, size=self.tx_size)
 
-        elif self.signal() == 0 and not self.position.is_short:
+        elif self.signal() == -1 and not self.position.is_short:
             self.position.close()
             sl1 = self.data.Close[-1] + self.data.Close[-1] * self.sl_pct
             tp1 = d["close"] - tppc
             if tp1 < sl1 and tp1 < self.data.Close[-1] and sl1 > self.data.Close[-1]:
+                full_size = self.equity/self.data.Close[0]
+                half_size = math.floor(full_size/2)
                 self.sell(sl=sl1, tp=tp1, size=self.tx_size)
                 self.sell(sl=sl1, size=self.tx_size)
 

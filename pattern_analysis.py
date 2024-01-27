@@ -57,6 +57,16 @@ def compute_atr(stock_data):
     )
     return atr
 
+def apply_filters(df, minDolVol=50): 
+    df["atr"] = df.groupby(level=1, group_keys=False).apply(compute_atr)
+    df["relative_atr"] = df.groupby(level=1, group_keys=False).apply(
+        computer_relative_atr
+    )
+    df["dollar_volume"] = (df["adj close"] * df["volume"]) / 1e6
+    avg_dvol = df.groupby(level=1, group_keys=False)["dollar_volume"].mean()
+    filtered_tickers = avg_dvol[avg_dvol > minDolVol]
+
+    return filtered_tickers
 
 def apply_technical_analysis(df):
     # df["macd"] = df.groupby(level=1, group_keys=False)["adj close"].apply(compute_macd)
@@ -70,11 +80,18 @@ def apply_technical_analysis(df):
             lambda x: pandas_ta.ema(close=x, length=length)
         )
 
-    df["atr"] = df.groupby(level=1, group_keys=False).apply(compute_atr)
-    df["relative_atr"] = df.groupby(level=1, group_keys=False).apply(
-        computer_relative_atr
-    )
-    df["dollar_volume"] = (df["adj close"] * df["volume"]) / 1e6
+
+    return df
+
+def apply_ta_symbol(df):
+    # df["macd"] = df.groupby(level=1, group_keys=False)["adj close"].apply(compute_macd)
+    # df["rsi"] = df.groupby(level=1)["adj close"].transform(
+    #     lambda x: pandas_ta.rsi(close=x, length=20)
+    # )
+    stacked_emas = [8, 21, 34, 55] #, 89]
+    for i in range(len(stacked_emas)):
+        length = stacked_emas[i]
+        df[f"EMA{length}"] = df.ta.ema(length)
     return df
 
 
@@ -86,10 +103,10 @@ def compute_macd(close):
 def is_gartley(zigzag, fuzz_factor):
     if len(zigzag) != 5:
         return 0
-    XA = zigzag[1]["adj close"] - zigzag[0]["adj close"]
-    AB = zigzag[2]["adj close"] - zigzag[1]["adj close"]
-    BC = zigzag[3]["adj close"] - zigzag[2]["adj close"]
-    CD = zigzag[4]["adj close"] - zigzag[3]["adj close"]
+    XA = zigzag[1]["close"] - zigzag[0]["close"]
+    AB = zigzag[2]["close"] - zigzag[1]["close"]
+    BC = zigzag[3]["close"] - zigzag[2]["close"]
+    CD = zigzag[4]["close"] - zigzag[3]["close"]
 
     AB_range = [(0.618 - fuzz_factor) * abs(XA), (0.618 + fuzz_factor) * abs(XA)]
     BC_range = [(0.382 - fuzz_factor) * abs(AB), (0.886 + fuzz_factor) * abs(AB)]
@@ -137,17 +154,16 @@ def apply_extrema(df, order, lowColumn="close", highColumn="close"):
 
 def detect_structure(data, candle, backcandles, harmonic_fn, fuzz_factor=5, window=0):
     no_result = (0, np.nan, np.nan, np.nan, np.nan, np.nan)
-
-    if (candle <= (backcandles + window)) or (candle + window + 1 >= len(data)):
+    
+    if (candle <= (backcandles + window)) or (candle + window > len(data)):
         return no_result
-
-    localdf = data.iloc[candle - backcandles - window : candle - window]
-
+    
+    to_date_df = data.iloc[:candle-window+1]
+    to_date_df = apply_ta_symbol(to_date_df)
+    localdf = to_date_df.iloc[candle - backcandles - window + 1:]
     localdf.reset_index(drop=True, inplace=True)
 
     localdf["harmonic"] = 0
-
-    localdf["ema_local"] = pandas_ta.ema(localdf["close"], length=21)
 
     # apply_zigzag(localdf)
     apply_extrema(localdf, 3)
@@ -175,7 +191,7 @@ def detect_structure(data, candle, backcandles, harmonic_fn, fuzz_factor=5, wind
     C["hm_name"] = "C"
     D["hm_name"] = "D"
 
-    current_candle = data.iloc[candle]
+    current_candle = to_date_df.iloc[-1]
     current_candle_sentiment = (
         1 if ((current_candle["close"] - current_candle["open"]) > 0) else -1
     )
@@ -184,10 +200,11 @@ def detect_structure(data, candle, backcandles, harmonic_fn, fuzz_factor=5, wind
 
     # current_candle_dist = current_candle.name - D.name
     # print(len(localdf), current_candle.name, D, current_candle_dist, D['date'], current_candle['date'], pfn1, pfn2)
-    if pfn1 > 2:
-        print (f"Stale signal more than 2 bars away: {pfn1}.  ")
+    if pfn1 > 4:
+        # print (f"Stale signal more than 3 bars away: {pfn1}.  ")
         return no_result
 
+    
     hm_sentiment = last_five_extrema["pivot"].sum() * -1
     ema_signal = 1 if current_candle["close"] > current_candle["EMA34"] else -1
     signal = harmonic_fn([X, A, B, C, D], fuzz_factor)
@@ -195,7 +212,8 @@ def detect_structure(data, candle, backcandles, harmonic_fn, fuzz_factor=5, wind
     # When pivot is -1, that is a local low
     # harmonic signal = 1 is bullish
     pivot_and_signal_synced = signal + D["pivot"] == 0
-
+    # if (pivot_and_signal_synced):
+    #     print (f"signal, yay! Signal: {signal}, Pivot Distance: {pfn1}, EMA: {ema_signal}, CurrentCandle: {current_candle_sentiment}")
     if (
         signal != 0
         and pivot_and_signal_synced

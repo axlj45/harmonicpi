@@ -1,11 +1,9 @@
 from data_service import get_ticker_df
-from pattern_analysis import is_gartley, detect_structure, apply_technical_analysis
+from pattern_analysis import apply_filters, is_gartley, detect_structure, apply_technical_analysis
 from notification_service import send_notification
 from plotter_service import create_plotly
 from blob_service import upload_chart
-import pandas_ta
 import pandas as pd
-import pathlib
 
 fuzz_factor = 5.0 / 100
 
@@ -81,28 +79,29 @@ def identify_patterns(lvl, fuzz_factor, order):
         "NVDA",
     ]
 
-    date_str = "2023-11-16 11:00:00"
-    end_date = None  # pd.to_datetime(date_str)
+    date_str = "2023-12-04 14:00:00"
+    end_date = pd.to_datetime(date_str)
+    end_date = pd.Timestamp.now().ceil('30T')
 
-    #  end_date = pd.Timestamp.now().ceil(yf_interval.replace("m", "T"))
-
-    df = get_ticker_df(interval, yf_interval, tickers=input_tickers, end_date=end_date)
+    df = get_ticker_df(interval, yf_interval, tickers=None, end_date=None)
+    old_tickers = df.index.get_level_values("ticker").unique().values
+    filtered_tickers = apply_filters(df, 1.25*interval)
     apply_technical_analysis(df)
 
-    avg_dvol = df.groupby(level=1, group_keys=False)["dollar_volume"].mean()
-
-    filtered_tickers = avg_dvol[avg_dvol > 30]
-
-    # Filter the original DataFrame to include only the tickers of interest
     filtered_df = df.loc[
         df.index.get_level_values("ticker").isin(filtered_tickers.index)
     ]
 
+    new_tickers = filtered_df.index.get_level_values("ticker").unique().values
+
+    print(len(new_tickers), len(old_tickers))
+
     for ticker in filtered_df.index.get_level_values(1).unique():
         data = filtered_df.xs(ticker, level=1).drop_duplicates()
-        data = data.reset_index().rename(columns={"index": "original_index"})
         data = data[data["volume"] > 0]
-
+        data = data.iloc[-100:]
+        data = data.reset_index().rename(columns={"index": "original_index"})
+        
         signal = data.apply(
             lambda row: detect_structure(
                 data, row.name, 65, is_gartley, fuzz_factor, 0
@@ -114,39 +113,47 @@ def identify_patterns(lvl, fuzz_factor, order):
         results_df.columns = ["harmonic", "x", "a", "b", "c", "d"]
         data = pd.concat([data, results_df], axis=1)
 
-        avg_vol = data.loc[:, "volume"].mean()
-        if avg_vol < 100000:
+        latestSignal = None
+
+        if len(data[data["harmonic"]!=0]) > 0:
+            for i in range(3):
+                location = 0-i
+                print(f"Searching {ticker}, {yf_interval}", data.iloc[location]['harmonic'])
+                if data.iloc[location]['harmonic'] != 0:
+                    latestSignal = data.iloc[location]
+                    break
+
+        if latestSignal is None:
             continue
 
-        if data.iloc[-2]["harmonic"] != 0:
-            latestSignal = signal.iloc[-2]
-            x = latestSignal[1].date
-            d = latestSignal[5].date
-            xabcd = latestSignal[-5:]
-            sentiment = "Bullish" if data.iloc[-2]["harmonic"] == 1 else "Bearish"
+        x = latestSignal[1].date
+        d = latestSignal[5].date
+        xabcd = latestSignal[-5:]
 
-            result = parse_signal(latestSignal, data.iloc[-2])
-            print(result)
-            if result is None:
-                continue
+        sentiment = "Bullish" if latestSignal["harmonic"] == 1 else "Bearish"
 
-            chart_html, chart_png = create_plotly(
-                data, ticker, sentiment, "Gartley", yf_interval, xabcd, result
-            )
-            chart_png_url = upload_chart(chart_png)
-            chart_url = upload_chart(chart_html)
-            send_notification(
-                ticker,
-                sentiment,
-                "Gartley",
-                yf_interval,
-                x,
-                d,
-                chart_png_url,
-                chart_url,
-            )
-            pathlib.Path.unlink(chart_html)
-            pathlib.Path.unlink(chart_png)
+        result = parse_signal(latestSignal, latestSignal)
+        
+        if result is None:
+            continue
+
+        chart_html, chart_png = create_plotly(
+            data, ticker, sentiment, "Gartley", yf_interval, xabcd, result
+        )
+        chart_png_url = upload_chart(chart_png)
+        chart_url = upload_chart(chart_html)
+        send_notification(
+            ticker,
+            sentiment,
+            "Gartley",
+            yf_interval,
+            x,
+            d,
+            chart_png_url,
+            chart_url,
+        )
+        # pathlib.Path.unlink(chart_html)
+        # pathlib.Path.unlink(chart_png)
 
 
 def parse_signal(signal, current_candle):
@@ -159,13 +166,15 @@ def parse_signal(signal, current_candle):
     d = signal[5]
 
     tpv = abs((a["close"] - x["close"]) * tp_pct)
-
+    print(direction)
     if direction == 1:
         sl1 = current_candle.close - current_candle.close * sl_pct
         tp1 = d.close + tpv
         print("buy_signal:" + current_candle)
         if tp1 > sl1 and tp1 > current_candle.close and sl1 < current_candle.close:
             return ("BUY", current_candle.close, sl1, tp1)
+        else:
+            print ("BUY Signal dropped:\n----------\nClose: {current_candle.close}, TP: {tp1}, SL: {sl1}", {signal})
 
     elif direction == -1:
         sl1 = current_candle.close + current_candle.close * sl_pct
@@ -173,6 +182,7 @@ def parse_signal(signal, current_candle):
         print("sell_signal:" + current_candle)
         if tp1 < sl1 and tp1 < current_candle.close and sl1 > current_candle.close:
             return ("SELL", current_candle.close, sl1, tp1)
+        
 
     return None
 
